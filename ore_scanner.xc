@@ -2,7 +2,7 @@
 # |                                                                                                                                     |
 # |  Ore Scanner                                                                                                                        |
 # |  by: MrNissenDK                                                                                                                     |
-# |  version: 2.0.1                                                                                                                       |
+# |  version: 2.0.1                                                                                                                     |
 # |  date: 2025-04-22                                                                                                                   |
 # |  description: visable ore scanning showing density of ores with appropiat color and a terrain scanner that show if its Sea or Land  |
 # |                                                                                                                                     |

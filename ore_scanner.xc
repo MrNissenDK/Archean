@@ -8,6 +8,7 @@
 # |                                                                                                                                     |
 # +-------------------------------------------------------------------------------------------------------------------------------------+
 var $screen = screen(0,0)
+var $distancColoring = gray
 const $pivot_io = 2
 const $scanner_io = 1
 const $scannerTerrain_io = 3
@@ -73,6 +74,8 @@ var $maxLand = ".last{0}.current{0}"
 var $maxSea = ".last{0}.current{0}"
 function @scanning()
 	var $doRad = sqrt(pow($radius, 2)*2)
+	var $cx = $width / 2
+	var $cy = $height / 2 + 5
 	repeat $speed ($_discard)
 		var $ang = @toAngle($angle)
 		output_number($pivot_io, 0, $ang)
@@ -81,8 +84,6 @@ function @scanning()
 		var $cos = cos($ang * PI * 2 + PI)
 		var $sin2 = sin(($ang + @toAngle(2)) * PI * 2 + PI)
 		var $cos2 = cos(($ang + @toAngle(2)) * PI * 2 + PI)
-		var $cx = $width / 2
-		var $cy = $height / 2 + 5
 		$screen.draw_line( $cx + $sin2 * $radius / 5 * 2, $cy + $cos2 * $radius / 5 * 2, $cx + $sin2 * $radius / 5 * 4, $cy + $cos2 * $radius / 5 * 4, red)
 		var $last = @scan(0, 0)
 		repeat $doRad ($j)
@@ -126,6 +127,27 @@ function @scanning()
 			$screen.draw_point($x, $y, color($col.r:number,$col.g:number,$col.b:number))
 	$maxLand.last = $maxLand.current
 	$maxSea.last = $maxSea.current
+	var $distanceCircles = min($width, $height - 20) / 8;
+	var $do = floor(sqrt(pow(max($width, $height - 20) / 2, 2) * 2) / $distanceCircles)
+	$screen.text_align(top)
+	$screen.text_size(0.5)
+	repeat $do ($i)
+		var $dist = $i * $distanceCircles
+		if $i == 0
+			$dist += 3
+		$screen.draw_circle($cx, $cy, $dist, $distancColoring)
+		if $i < 5
+			var $dist2 = $dist * $scanDistance / $radius
+			var $distText = ""
+			if $dist2 < 1000
+				$distText = text("{0}m", $dist2)
+			else
+				$dist2 = $dist2 / 1000
+				$distText = text("{0.0}km", $dist2)
+			$screen.write(1, $dist + $cy + 4, white, $distText)
+			$screen.write(0, $dist + $cy + 3, $distancColoring, $distText)
+	$screen.text_align(top_left)
+	$screen.text_size(1)
 var $changeVisables = 0
 update
 	@scanning()

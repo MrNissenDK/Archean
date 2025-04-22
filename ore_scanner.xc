@@ -2,7 +2,7 @@
 # |                                                                                                                                     |
 # |  Ore Scanner                                                                                                                        |
 # |  by: MrNissenDK                                                                                                                     |
-# |  version: 2.0                                                                                                                       |
+# |  version: 2.0.1                                                                                                                       |
 # |  date: 2025-04-22                                                                                                                   |
 # |  description: visable ore scanning showing density of ores with appropiat color and a terrain scanner that show if its Sea or Land  |
 # |                                                                                                                                     |
@@ -12,7 +12,7 @@ const $pivot_io = 2
 const $scanner_io = 1
 const $scannerTerrain_io = 3
 const $speed = 4
-var $scanDistance = 100000
+var $scanDistance = 2000
 var $show = ""
 var $minimumDensity = 0.7
 var $width: number
@@ -28,9 +28,9 @@ function @scan($dist:number, $channel: number):text
 	var $data = input_text($scanner_io, $channel)
 	var $level = input_number($scannerTerrain_io, $channel)
 	if $level > 0
-		$data.Land = clamp($level / 10000, 0, 1) + 0.5
+		$data.Land = $level
 	else
-		$data.Sea = clamp(-$level / 10000, 0, 1) + 0.5
+		$data.Sea = -$level
 	return $data
 var $angle = 0
 init
@@ -56,7 +56,6 @@ init
 	$colorMap.U  = color(102, 255, 102)
 	$colorMap.W  = color(80, 80, 80)
 
-	// Environment
 	$colorMap.land = color(34, 139, 34)
 	$colorMap.sea  = color(0, 105, 148)
 	foreach $colorMap ($ore, $_discard)
@@ -70,6 +69,8 @@ function @getRGB($ore:text):text
 	$col = floor($col) / 256
 	$color.b = ($col - floor($col)) * 256
 	return $color
+var $maxLand = ".last{0}.current{0}"
+var $maxSea = ".last{0}.current{0}"
 function @scanning()
 	var $doRad = sqrt(pow($radius, 2)*2)
 	repeat $speed ($_discard)
@@ -90,15 +91,19 @@ function @scanning()
 			var $y = $cos * $j + $cy
 			var $col = ""
 			if $show.Land:number == 1 && $ores.Land != ""
+				$maxLand.current = max($maxLand.current, $ores.Land:number)
 				$col = @getRGB("Land")
-				$col.r *= $ores.Land:number
-				$col.g *= $ores.Land:number
-				$col.b *= $ores.Land:number
+				var $_maxLand = max($maxLand.current, $maxLand.last)
+				$col.r *= 1 - $ores.Land:number / $_maxLand
+				$col.g *= 1 - $ores.Land:number / $_maxLand
+				$col.b *= 1 - $ores.Land:number / $_maxLand
 			elseif $show.Sea:number == 1 && $ores.Sea != ""
+				$maxSea.current = max($maxSea.current, $ores.Sea:number)
 				$col = @getRGB("Sea")
-				$col.r *= $ores.Sea:number
-				$col.g *= $ores.Sea:number
-				$col.b *= $ores.Sea:number
+				var $_maxSea = max($maxSea.current, $maxSea.last)
+				$col.r *= 1 - $ores.Sea:number / $_maxSea 
+				$col.g *= 1 - $ores.Sea:number / $_maxSea 
+				$col.b *= 1 - $ores.Sea:number / $_maxSea 
 			else
 				$col = ".r{0}.g{0}.b{0}"
 			var $k = 0
@@ -119,6 +124,8 @@ function @scanning()
 				$col.g /= $k
 				$col.b /= $k
 			$screen.draw_point($x, $y, color($col.r:number,$col.g:number,$col.b:number))
+	$maxLand.last = $maxLand.current
+	$maxSea.last = $maxSea.current
 var $changeVisables = 0
 update
 	@scanning()

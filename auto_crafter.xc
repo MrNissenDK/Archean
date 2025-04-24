@@ -29,15 +29,7 @@ var $selected:text
 array $autocraftList:text
 var $rawItem:text
 array $autocraftQty:number
-
-function @screenDirty()
-	$dirty = 1
-
-function @error()
-	if !$error
-		@screenDirty()
-	$error = 1
-
+var $errorMessage:text
 
 function @pos($x: number, $y:number, $sizeX: number, $sizeY: number): text
 	var $pos = ""
@@ -65,16 +57,15 @@ function @clearCrafting()
 	$rawItem = ""
 recursive function @autoCraft($item:text, $n:number)
 	var $recipe = get_recipe("crafter", $item)
-	var $need = $n
-	if $container.item:number > 0
-		$need = max($need - $container.item:number, 0)
-	$container.item -= min($container.item:number, $n)
 	if $recipe
+		var $need = $n
+		$need = max($need - $container.$item:number, 0)
+		$container.$item -= min($container.$item:number, $n)
 		if $need > 0
 			$autocraftList.append($item)
 			$autocraftQty.append($n)
 			foreach $recipe ($k,$v)
-				recurse($k, $v * $n)
+				recurse($k, $v * $need)
 	else
 		$rawItem.$item = $rawItem.$item:number + $n
 
@@ -204,21 +195,17 @@ function @craftingScreen()
 					@clearCrafting()
 
 	$max = $dpIndex + $offSet
-var $canCraft = 0
 function @craftingList()
 	if size($rawItem) == 0
 		return
 	var $i = 0
-	$canCraft = 1
 	foreach $rawItem ($item, $qty)
 		@addButton(@pos(9, $i * 4 + 6, 9, 2), $item, @color(0,0,white), @align("right", "top", "left"))
 		var $color = color(150,200,150)
 		if $item != "H2" && $item != "O2" && $item != "H2O"
 			if $container.$item:number == 0
-				$canCraft = 0
 				$color = red
 			elseif $container.$item:number < $qty:number
-				$canCraft = 0
 				$color = orange
 		var $ext = ""
 		if $qty:number > 1000
@@ -233,14 +220,20 @@ function @craftingList()
 		@addButton(@pos(9, $i * 4 + 8, 9, 2), text("{0.00}{}",$qty, $ext), @color(0,0,$color), @align("right", "top", "right"))
 		$i++
 function @canCraft($craft:text): number
+	$container = input_text($container_io, 0)
 	if $craft == ""
 		return 1
 	var $recipe = get_recipe("crafter", $craft)
 	if $recipe
 		foreach $recipe ($item, $qty)
-			if $qty > $container.$item
+			if $item == "H2" || $item == "O2" || $item == "H2O"
+				continue
+			if $qty > $container.$item:number
 				return 0
 	return 1
+function @error($message:text, $id: number)
+	$error = 1
+	$errorMessage = $message
 update
 	$screen.blank(black)
 	$screen.text_size(1)
@@ -252,21 +245,21 @@ update
 	@craftingList()
 	@numPad()
 	@craftingScreen()
-	print(size($autocraftList), $canCraft, $isCrafting)
-	if size($autocraftList) && $canCraft && $isCrafting
+	if size($autocraftList) && $isCrafting
 		var $i = 0
 		var $craft = $autocraftList.$i
-		print($craft)
 		while !@canCraft($craft) || $container.$craft:number >= $autocraftQty.$i
+			if $i >= size($autocraftList)
+				$error = 1
+				$errorMessage = "Trying to access index out of bound"
+				break
 			$i++
 			$craft = $autocraftList.$i
-		print("i", $i)
-		print("craft", $craft)
-		print("qty", $autocraftQty.$i)
-		print("con", $container.$craft)
-		if $container.$craft:number < $autocraftQty.$i
-			print("sending", $craft)
+		print($autocraftQty.$i)
+		if $container.$craft:number < $autocraftQty.$i - 1 && !$error
 			output_number($crafter_io, 0, 1)
 			output_text($crafter_io, 1, $craft)
 	else
 		output_number($crafter_io, 0, 0)
+	if $error
+		@addButton(@pos($numberOfCellsInWidth - 5, floor(ceil($screen.height / $cellSize) / 2) - 2, 10, 4), $errorMessage, @color(red, white, black))

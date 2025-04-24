@@ -220,7 +220,6 @@ function @craftingList()
 		@addButton(@pos(9, $i * 4 + 8, 9, 2), text("{0.00}{}",$qty, $ext), @color(0,0,$color), @align("right", "top", "right"))
 		$i++
 function @canCraft($craft:text): number
-	$container = input_text($container_io, 0)
 	if $craft == ""
 		return 1
 	var $recipe = get_recipe("crafter", $craft)
@@ -234,6 +233,24 @@ function @canCraft($craft:text): number
 function @error($message:text, $id: number)
 	$error = 1
 	$errorMessage = $message
+tick
+	$container = input_text($container_io, 0)
+	if size($autocraftList) && $isCrafting
+		var $i = 0
+		var $craft = $autocraftList.$i
+		while !@canCraft($craft) || $container.$craft:number >= $autocraftQty.$i
+			if $i >= size($autocraftList)
+				$error = 1
+				$errorMessage = "Trying to access index out of bound"
+				break
+			$i++
+			$craft = $autocraftList.$i
+		if $container.$craft:number < $autocraftQty.$i && !$error
+			output_number($crafter_io, 0, 1)
+			output_text($crafter_io, 1, $craft)
+	else
+		output_number($crafter_io, 0, 0)
+
 update
 	$screen.blank(black)
 	$screen.text_size(1)
@@ -245,21 +262,6 @@ update
 	@craftingList()
 	@numPad()
 	@craftingScreen()
-	if size($autocraftList) && $isCrafting
-		var $i = 0
-		var $craft = $autocraftList.$i
-		while !@canCraft($craft) || $container.$craft:number >= $autocraftQty.$i
-			if $i >= size($autocraftList)
-				$error = 1
-				$errorMessage = "Trying to access index out of bound"
-				break
-			$i++
-			$craft = $autocraftList.$i
-		print($autocraftQty.$i)
-		if $container.$craft:number < $autocraftQty.$i && !$error
-			output_number($crafter_io, 0, 1)
-			output_text($crafter_io, 1, $craft)
-	else
-		output_number($crafter_io, 0, 0)
 	if $error
-		@addButton(@pos($numberOfCellsInWidth - 5, floor(ceil($screen.height / $cellSize) / 2) - 2, 10, 4), $errorMessage, @color(red, white, black))
+		if @addButton(@pos($numberOfCellsInWidth - 5, floor(ceil($screen.height / $cellSize) / 2) - 2, 10, 4), $errorMessage, @color(red, white, black))
+			$error = 0

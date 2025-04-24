@@ -256,7 +256,7 @@ update
 			$i++
 			$craft = $autocraftList.$i
 		print($autocraftQty.$i)
-		if $container.$craft:number < $autocraftQty.$i - 1 && !$error
+		if $container.$craft:number < $autocraftQty.$i && !$error
 			output_number($crafter_io, 0, 1)
 			output_text($crafter_io, 1, $craft)
 	else

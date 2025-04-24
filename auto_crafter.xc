@@ -58,8 +58,7 @@ function @clearCrafting()
 recursive function @autoCraft($item:text, $n:number)
 	var $recipe = get_recipe("crafter", $item)
 	if $recipe
-		var $need = $n
-		$need = max($need - $container.$item:number, 0)
+		var $need = max($n - $container.$item:number, 0)
 		$container.$item -= min($container.$item:number, $n)
 		if $need > 0
 			$autocraftList.append($item)
@@ -233,24 +232,6 @@ function @canCraft($craft:text): number
 function @error($message:text, $id: number)
 	$error = 1
 	$errorMessage = $message
-tick
-	$container = input_text($container_io, 0)
-	if size($autocraftList) && $isCrafting
-		var $i = 0
-		var $craft = $autocraftList.$i
-		while !@canCraft($craft) || $container.$craft:number >= $autocraftQty.$i
-			if $i >= size($autocraftList)
-				$error = 1
-				$errorMessage = "Trying to access index out of bound"
-				break
-			$i++
-			$craft = $autocraftList.$i
-		if $container.$craft:number < $autocraftQty.$i && !$error
-			output_number($crafter_io, 0, 1)
-			output_text($crafter_io, 1, $craft)
-	else
-		output_number($crafter_io, 0, 0)
-
 update
 	$screen.blank(black)
 	$screen.text_size(1)
@@ -262,6 +243,27 @@ update
 	@craftingList()
 	@numPad()
 	@craftingScreen()
-	if $error
+	if !$error
+		$container = input_text($container_io, 0)
+		if size($autocraftList) && $isCrafting
+			var $i = 0
+			var $craft = $autocraftList.$i
+			while !@canCraft($craft) || $container.$craft:number >= $autocraftQty.$i
+				$i++
+				print($i, size($autocraftList))
+				if $i >= size($autocraftList) || size($autocraftList) == ""
+					$error = 1
+					$errorMessage = "Trying to access index out of bound"
+					print($error)
+					output_number($crafter_io, 0, 0)
+					output_text($crafter_io, 1, "")
+					return
+				$craft = $autocraftList.$i
+			if $container.$craft:number < $autocraftQty.$i && !$error
+				output_number($crafter_io, 0, 1)
+				output_text($crafter_io, 1, $craft)
+		else
+			output_number($crafter_io, 0, 0)
+	else
 		if @addButton(@pos($numberOfCellsInWidth - 5, floor(ceil($screen.height / $cellSize) / 2) - 2, 10, 4), $errorMessage, @color(red, white, black))
 			$error = 0

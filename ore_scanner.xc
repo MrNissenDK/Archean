@@ -1,25 +1,24 @@
-# +-------------------------------------------------------------------------------------------------------------------------------------+
-# |                                                                                                                                     |
-# |  Ore Scanner                                                                                                                        |
-# |  by: MrNissenDK                                                                                                                     |
-# |  version: 2.0.1                                                                                                                     |
-# |  date: 2025-04-22                                                                                                                   |
-# |  description: visable ore scanning showing density of ores with appropiat color and a terrain scanner that show if its Sea or Land  |
-# |                                                                                                                                     |
-# +-------------------------------------------------------------------------------------------------------------------------------------+
-var $screen = screen(0,0)
+; +-------------------------------------------------------------------------------------------------------------------------------------+
+; |                                                                                                                                     |
+; |  Ore Scanner                                                                                                                        |
+; |  by: MrNissenDK                                                                                                                     |
+; |  version: 2.1.0                                                                                                                     |
+; |  date: 2025-04-22                                                                                                                   |
+; |  description: visable ore scanning showing density of ores with appropiat color and a terrain scanner that show if its Sea or Land  |
+; |                                                                                                                                     |
+; +-------------------------------------------------------------------------------------------------------------------------------------+
+include "grid.xc"
 var $distancColoring = gray
-const $pivot_io = 2
+const $pivot_io = 3
 const $scanner_io = 1
-const $scannerTerrain_io = 3
-const $speed = 4
-var $scanDistance = 2000
+const $scannerTerrain_io = 2
+const $speed = 1
+var $scanDistance = 1000
 var $show = ""
 var $minimumDensity = 0.7
-var $width: number
-var $height: number
 var $radius: number
 var $colorMap: text
+var $scanning = 0
 function @toAngle($deg:number):number
 	return $deg / 360
 function @scan($dist:number, $channel: number):text
@@ -35,9 +34,8 @@ function @scan($dist:number, $channel: number):text
 	return $data
 var $angle = 0
 init
-	$width = $screen.width
-	$height = $screen.width
-	$radius = max($width, $height - 20) / 2
+	@init_grid()
+	$radius = max($screen.width, $screen.height - 20) / 2
 	$screen.blank(black)
 	output_number($pivot_io, 1, 3)
 	$angle = input_number($pivot_io, 0) * 360
@@ -59,8 +57,8 @@ init
 
 	$colorMap.land = color(34, 139, 34)
 	$colorMap.sea  = color(0, 105, 148)
-	foreach $colorMap ($ore, $_discard)
-		$show.$ore = 1
+	$show.land = 1
+	$show.sea = 1
 function @getRGB($ore:text):text
 	var $color = ""
 	var $col = $colorMap.$ore:number / 256
@@ -74,17 +72,17 @@ var $maxLand = ".last{0}.current{0}"
 var $maxSea = ".last{0}.current{0}"
 function @scanning()
 	var $doRad = sqrt(pow($radius, 2)*2)
-	var $cx = $width / 2
-	var $cy = $height / 2 + 5
+	var $cx = $screen.width / 2
+	var $cy = $screen.height / 2 + 5
 	repeat $speed ($_discard)
 		var $ang = @toAngle($angle)
 		output_number($pivot_io, 0, $ang)
-		$angle = ($angle + 0.25) % 360
-		var $sin = sin($ang * PI * 2 + PI)
-		var $cos = cos($ang * PI * 2 + PI)
-		var $sin2 = sin(($ang + @toAngle(2)) * PI * 2 + PI)
-		var $cos2 = cos(($ang + @toAngle(2)) * PI * 2 + PI)
-		$screen.draw_line( $cx + $sin2 * $radius / 5 * 2, $cy + $cos2 * $radius / 5 * 2, $cx + $sin2 * $radius / 5 * 4, $cy + $cos2 * $radius / 5 * 4, red)
+		$angle = ($angle + 1) % 360
+		var $sin = sin($ang * PI * 2)
+		var $cos = cos($ang * PI * 2)
+		#var $sin2 = sin(($ang + @toAngle(2)) * PI * 2 + PI)
+		#var $cos2 = cos(($ang + @toAngle(2)) * PI * 2 + PI)
+		#$screen.draw_line( $cx + $sin2 * $radius / 5 * 2, $cy + $cos2 * $radius / 5 * 2, $cx + $sin2 * $radius / 5 * 4, $cy + $cos2 * $radius / 5 * 4, red)
 		var $last = @scan(0, 0)
 		repeat $doRad ($j)
 			var $ores = @scan($j * $scanDistance / $radius, $j)
@@ -95,16 +93,16 @@ function @scanning()
 				$maxLand.current = max($maxLand.current, $ores.Land:number)
 				$col = @getRGB("Land")
 				var $_maxLand = max($maxLand.current, $maxLand.last)
-				$col.r *= 1 - $ores.Land:number / $_maxLand
-				$col.g *= 1 - $ores.Land:number / $_maxLand
-				$col.b *= 1 - $ores.Land:number / $_maxLand
+				$col.r *= 1 - $ores.Land:number / max($_maxLand, 1)
+				$col.g *= 1 - $ores.Land:number / max($_maxLand, 1)
+				$col.b *= 1 - $ores.Land:number / max($_maxLand, 1)
 			elseif $show.Sea:number == 1 && $ores.Sea != ""
 				$maxSea.current = max($maxSea.current, $ores.Sea:number)
 				$col = @getRGB("Sea")
 				var $_maxSea = max($maxSea.current, $maxSea.last)
-				$col.r *= 1 - $ores.Sea:number / $_maxSea 
-				$col.g *= 1 - $ores.Sea:number / $_maxSea 
-				$col.b *= 1 - $ores.Sea:number / $_maxSea 
+				$col.r *= 1 - $ores.Sea:number / max($_maxSea, 1)
+				$col.g *= 1 - $ores.Sea:number / max($_maxSea, 1)
+				$col.b *= 1 - $ores.Sea:number / max($_maxSea, 1)
 			else
 				$col = ".r{0}.g{0}.b{0}"
 			var $k = 0
@@ -127,8 +125,8 @@ function @scanning()
 			$screen.draw_point($x, $y, color($col.r:number,$col.g:number,$col.b:number))
 	$maxLand.last = $maxLand.current
 	$maxSea.last = $maxSea.current
-	var $distanceCircles = min($width, $height - 20) / 8;
-	var $do = floor(sqrt(pow(max($width, $height - 20) / 2, 2) * 2) / $distanceCircles)
+	var $distanceCircles = min($screen.width, $screen.height - 20) / 8;
+	var $do = floor(sqrt(pow(max($screen.width, $screen.height - 20) / 2, 2) * 2) / $distanceCircles)
 	$screen.text_align(top)
 	$screen.text_size(0.5)
 	repeat $do ($i)
@@ -149,45 +147,44 @@ function @scanning()
 	$screen.text_align(top_left)
 	$screen.text_size(1)
 var $changeVisables = 0
+function @showMenu($showMenu:number)
+	var $x = $numberOfCellsInWidth - 6
+	var $y = 2
+	foreach $colorMap ($ore, $color)
+		var $buttonColors = @color(black, black, black)
+		if $showMenu
+			$buttonColors = @color(black, white, black)
+		if $showMenu && $show.$ore
+			$buttonColors.background = $color
+		if @addbutton(@pos($x,$y,6,2), $ore, $buttonColors, @align("", "", "center"))
+			$show.$ore = !$show.$ore
+		$y+=2
+		if $y >= $numberOfCellsInHeight
+			$y = 0
+			$x -= 6
 update
-	@scanning()
-	$screen.text_size(1)
-	$screen.draw_rect(0, 0, $width, 20, black, black)
-	$screen.write(20, 0, white, text("R: {}m", $scanDistance))
-	$screen.write(20, 10, white, text("D: {}", $minimumDensity))
-	if $screen.button_rect(0, 0, 10, 10, black)
+	var $toggleScanningColor = @color(black, red, black)
+	var $scanningOn = "Off"
+	if $scanning
+		$toggleScanningColor.background = green
+		$scanningOn = "On"
+		@scanning()
+	if @addbutton(@pos(0,0,6,4),$scanningOn,$toggleScanningColor)
+		$scanning = !$scanning
+	if @addbutton(@pos(6,0,2,2),"-",@color(black, black, red))
 		$scanDistance = max($scanDistance - 100, 100)
-	if $screen.button_rect(10, 0, 20, 10, black)
+	if @addbutton(@pos(8,0,2,2),"+",@color(black, black, green))
 		$scanDistance = max($scanDistance + 100, 100)
-	$screen.write(2, 2, red, "-")
-	$screen.write(12, 2, green, "+")
-	if $screen.button_rect(0, 10, 10, 20, black)
+	if @addbutton(@pos(6,2,2,2),"-",@color(black, black, red))
 		$minimumDensity = clamp($minimumDensity - 0.1, 0, 1)
-	if $screen.button_rect(10, 10, 20, 20, black)
+	if @addbutton(@pos(8,2,2,2),"+",@color(black, black, green))
 		$minimumDensity = clamp($minimumDensity + 0.1, 0, 1)
-	$screen.write(2, 12, red, "-")
-	$screen.write(12, 12, green, "+")
-	if $screen.button_rect($width - 30, 0, $width, 12, gray, white)
-		$changeVisables = ($changeVisables + 1) % 2
-		if $changeVisables == 0
-			var $x = $width - 30
-			var $y = 12	
-			foreach $colorMap ($ore, $color)
-				$screen.draw_rect($x, $y, $x + 40, $y + 12, black, black)
-				$y+=12
-				if $y >= $height
-					$y = 0
-					$x -= 40
-	$screen.write($width - 27, 2, black, "conf")
-	if $changeVisables == 1
-		var $x = $width - 30
-		var $y = 12	
-		foreach $colorMap ($ore, $color)
-			if $screen.button_rect($x, $y, $x + 40, $y + 12, $color:number, white)
-				$show.$ore = ($show.$ore:number + 1)%2
-			$screen.write($x + 3, $y + 2, $color:number, text($ore & " {}", $show.$ore))
-			$y+=12
-			if $y >= $height
-				$y = 0
-				$x -= 40
+	@addbutton(@pos(10,0,24,2),text("R: {}m", $scanDistance),@color(black, black, white), @align("", "", "left"))
+	@addbutton(@pos(10,2,30,2),text("D: {0}%", $minimumDensity * 100),@color(black, black, white), @align("", "", "left"))
 	
+	if @addbutton(@pos(34,0,6,2),text("conf", $scanDistance),@color(gray, white, gray), @align("", "", "center"))
+		$changeVisables = !$changeVisables
+		if !$changeVisables
+			@showMenu(0)
+	if $changeVisables == 1
+		@showMenu(1)

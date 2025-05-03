@@ -8,13 +8,13 @@
 # |                                                                                          |
 # +------------------------------------------------------------------------------------------+
 
+include "grid.xc"
+
 # Settings IO
-var $screen = screen(3,0)
 const $crafter_io = 5
 const $container_io = 4
 
 # Settings variables
-var $numberOfCellsInWidth = 40
 const $isDebug = 0
 
 # Crafter variables
@@ -24,33 +24,12 @@ var $dirty = 0
 var $container:text
 var $isCrafting = 0
 var $categories:text
-var $cellSize:number
 var $selected:text
 array $autocraftList:text
 var $rawItem:text
 array $autocraftQty:number
 var $errorMessage:text
 
-function @pos($x: number, $y:number, $sizeX: number, $sizeY: number): text
-	var $pos = ""
-	$pos.x = $x
-	$pos.y = $y
-	$pos.sizeX = $sizeX
-	$pos.sizeY = $sizeY
-	return $pos
-function @color($border:number, $background:number, $text:number): text
-	var $color = ""
-	$color.border = $border
-	$color.background = $background
-	$color.text = $text
-	return $color
-function @align($x:text, $y:text, $text:text, $textPadding:number): text
-	var $align = ""
-	$align.x = $x
-	$align.y = $y
-	$align.text = $text
-	$align.textPadding = $textPadding
-	return $align
 function @clearCrafting()
 	$autocraftList.clear()
 	$autocraftQty.clear()
@@ -68,42 +47,8 @@ recursive function @autoCraft($item:text, $n:number)
 	else
 		$rawItem.$item = $rawItem.$item:number + $n
 
-function @addButton($pos:text, $txt:text, $color: text, $align:text): number
-	var $x = 0
-	var $y = 0
-	if lower($align.x) == "right"
-		$x = -$screen.width
-	if lower($align.y) == "bottom"
-		$y = -$screen.height
-	var $pressed = 0
-	var $width = ceil($cellSize * $pos.sizeX)
-	var $height = ceil($cellSize * $pos.sizeY)
-	$x = floor(abs($x + $pos.x:number * $cellSize))
-	$y = floor(abs($y + $pos.y:number * $cellSize))
-	if $screen.button_rect($x, $y, $x + $width, $y + $height, $color.border:number, $color.background:number)
-		$pressed = 1
-	if $txt == ""
-		return $pressed
-	var $tX = $x
-	var $tY = $y + ($height - 8) / 2
-	if($align.text == "left")
-		if $align.textPadding:number == 0
-			$tX += 3
-		else
-			$tX += $align.textPadding:number
-	elseif($align.text == "right")
-		$tX += ($width - size($txt) * 6)
-		if $align.textPadding:number == 0
-			$tX -= 3
-		else
-			$tX -= $align.textPadding:number
-	else
-		$tX += ($width - size($txt) * 6) / 2
-	$screen.write($tX, $tY, $color.text:number, $txt)
-	return $pressed
 init
-	if $cellSize <= 0
-		$cellSize = $screen.width / $numberOfCellsInWidth
+	@init_grid()
 	array $recipesCategories : text
 	$recipesCategories.from(get_recipes_categories("crafter"), ",")
 	foreach $recipesCategories ($i, $category)
